@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f0a1e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wanna date">
+  <title>Wanna date? — Admin</title>
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon.png">
+  <link rel="icon" href="/admin/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <!-- Connexion -->
+  <section id="login" class="screen" hidden>
+    <div class="logo">Wanna date<span>?</span></div>
+    <form id="loginForm" class="card">
+      <label>Mot de passe admin
+        <input type="password" name="password" autocomplete="current-password" required autofocus>
+      </label>
+      <button class="primary" type="submit">Entrer</button>
+      <p class="err" id="loginErr"></p>
+    </form>
+  </section>
+
+  <!-- App -->
+  <section id="app" class="screen" hidden>
+    <header>
+      <div class="logo small">Wanna date<span>?</span></div>
+      <a class="ghost" href="/?preview" target="_blank" rel="noopener">Voir la page ↗</a>
+    </header>
+
+    <div id="current" class="card current"></div>
+
+    <h2>Qui a le chandail&nbsp;?</h2>
+    <p class="hint">Un tap sur quelqu’un = c’est lui qui le porte maintenant.</p>
+    <div id="grid" class="grid"></div>
+
+    <h2>Hall of shame 🏆</h2>
+    <div id="leaderboard" class="card list"></div>
+
+    <h2>Historique</h2>
+    <div id="history" class="card list"></div>
+
+    <h2>QR code du chandail</h2>
+    <div class="card qr">
+      <img id="qrImg" alt="QR code">
+      <p class="hint" id="qrUrl"></p>
+      <div class="row">
+        <a class="btn" id="qrSvg" download="wanna-date-qr.svg">SVG (impression)</a>
+        <a class="btn" id="qrPng" download="wanna-date-qr.png">PNG</a>
+      </div>
+    </div>
+
+    <button class="ghost danger full" id="logout">Se déconnecter</button>
+  </section>
+
+  <!-- Fiche personne -->
+  <dialog id="editor">
+    <form id="editForm" method="dialog">
+      <h3 id="editTitle">Nouvelle personne</h3>
+      <div class="photoPick">
+        <div id="photoPreview" class="avatar"></div>
+        <div class="col">
+          <label class="btn">Choisir une photo<input type="file" accept="image/*" id="photoInput" hidden></label>
+          <button type="button" class="ghost danger" id="photoRemove">Retirer la photo</button>
+        </div>
+      </div>
+      <label>Prénom / surnom *<input name="name" required maxlength="60" placeholder="Jake"></label>
+      <label>Petit message<textarea name="tagline" rows="2" maxlength="280" placeholder="J’ai perdu au ski, mais pas mon charme."></textarea></label>
+      <label>Instagram<input name="instagram" placeholder="@jake" autocapitalize="off" autocorrect="off"></label>
+      <label>Téléphone (texto / appel)<input name="phone" type="tel" placeholder="514 555-1234"></label>
+      <label>Snapchat<input name="snapchat" placeholder="jake.snap" autocapitalize="off" autocorrect="off"></label>
+      <label>TikTok<input name="tiktok" placeholder="@jake" autocapitalize="off" autocorrect="off"></label>
+      <label>Autre lien<input name="link" type="url" placeholder="https://…" autocapitalize="off"></label>
+      <label>Texte du lien<input name="linkLabel" placeholder="Mon Spotify"></label>
+      <label>Quand on scanne…
+        <select name="redirect">
+          <option value="">Afficher la page avec tous ses liens</option>
+          <option value="instagram">Ouvrir directement Instagram</option>
+          <option value="snapchat">Ouvrir directement Snapchat</option>
+          <option value="tiktok">Ouvrir directement TikTok</option>
+          <option value="link">Ouvrir directement l’autre lien</option>
+        </select>
+      </label>
+      <p class="err" id="editErr"></p>
+      <div class="row">
+        <button type="button" class="ghost" id="editCancel">Annuler</button>
+        <button type="submit" class="primary" id="editSave">Enregistrer</button>
+      </div>
+      <button type="button" class="ghost danger full" id="editDelete">Supprimer de la banque</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>
