@@ -84,8 +84,7 @@ sur la page scanneur (bouton « ↻ une autre » pour en voir une autre, sans co
   qui scannent).
 - **Tap sur une personne** : c'est elle qui a le chandail maintenant. Effet immédiat sur le QR.
 - **✎** : modifier ou supprimer une fiche.
-- **Formulaire** : par défaut Insta *ou* numéro, ville et message (500 caractères max), plus
-  une case « J'ai 18 ans ou plus » à cocher (pas de question d'âge). Tout se règle dans
+- **Formulaire** : par défaut Insta *ou* numéro, ville et message (500 caractères max), . Tout se règle dans
   **⚙️ Plus → Formulaire des scanneurs** : pour chaque champ *Masqué / Optionnel / Obligatoire*,
   son titre et son exemple (`{nom}` = prénom du porteur). Il faut garder au moins Instagram ou
   le numéro. Anti-spam : champ piège pour les robots et 3 messages max par visiteur toutes les

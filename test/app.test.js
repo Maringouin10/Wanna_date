@@ -87,28 +87,25 @@ test('formulaire : les gens qui scannent laissent leurs infos', async () => {
   await req('POST', '/api/active', { id: lea.id });
 
   // Ni Insta ni numéro
-  let r = await form({ w: lea.id, adult: '1', message: 'Salut' });
+  let r = await form({ w: lea.id, message: 'Salut' });
   assert.equal(r.status, 400);
   assert.match(await r.text(), /au moins ton Instagram ou ton numéro/);
-  // Case « 18 ans ou plus » obligatoire, plus de question d'âge
-  r = await form({ w: lea.id, instagram: 'kid', city: 'Laval', message: 'Salut' });
-  assert.equal(r.status, 400);
-  assert.match(await r.text(), /18 ans ou plus/);
-  assert.doesNotMatch(await (await req('GET', '/?preview')).text(), /name="age"/);
+  // Aucune mention d'âge
+  assert.doesNotMatch(await (await req('GET', '/?preview')).text(), /âge|ans ou plus|name="age"|name="adult"/);
   // Message requis, valeurs conservées et échappées
-  r = await form({ w: lea.id, instagram: '@tom"x', adult: '1', message: '' });
+  r = await form({ w: lea.id, instagram: '@tom"x', message: '' });
   assert.equal(r.status, 400);
   // Valide
   // Ville obligatoire
-  r = await form({ w: lea.id, instagram: 'tom.ski', adult: '1', message: 'Salut' });
+  r = await form({ w: lea.id, instagram: 'tom.ski', message: 'Salut' });
   assert.equal(r.status, 400);
   assert.match(await r.text(), /ville/);
-  r = await form({ w: lea.id, instagram: 'https://instagram.com/tom.ski/', phone: '(514) 555-1234', adult: '1', city: '  Saint-Sauveur ', message: 'Je skie mieux que toi <3' });
+  r = await form({ w: lea.id, instagram: 'https://instagram.com/tom.ski/', phone: '(514) 555-1234', city: '  Saint-Sauveur ', message: 'Je skie mieux que toi <3' });
   assert.equal(r.status, 303);
   assert.match(r.headers.get('location'), /^\/merci/);
   assert.match(await (await fetch(BASE + r.headers.get('location'))).text(), /C’est envoyé/);
   // Robot (champ piège) : ignoré silencieusement
-  r = await form({ w: lea.id, instagram: 'bot', adult: '1', message: 'spam', website: 'x' });
+  r = await form({ w: lea.id, instagram: 'bot', message: 'spam', website: 'x' });
   assert.equal(r.status, 303);
 
   let state = await (await req('GET', '/api/state')).json();
@@ -123,8 +120,8 @@ test('formulaire : les gens qui scannent laissent leurs infos', async () => {
   assert.equal(leads[0].v, undefined); // l'empreinte du visiteur n'est pas exposée
 
   // Anti-spam : 3 messages max par 10 min
-  for (let i = 0; i < 2; i++) await form({ w: lea.id, instagram: 'tom.ski', adult: '1', city: 'Laval', message: 'encore ' + i });
-  r = await form({ w: lea.id, instagram: 'tom.ski', adult: '1', city: 'Laval', message: 'encore' });
+  for (let i = 0; i < 2; i++) await form({ w: lea.id, instagram: 'tom.ski', city: 'Laval', message: 'encore ' + i });
+  r = await form({ w: lea.id, instagram: 'tom.ski', city: 'Laval', message: 'encore' });
   assert.match(await r.text(), /Attends quelques minutes/);
   assert.equal(r.status, 400);
 
@@ -188,7 +185,7 @@ test('pickup line activable depuis admin', async () => {
   await req('PUT', '/api/settings', { pickup: false });
 });
 
-test('formulaire configurable : âge minimum et champs', async () => {
+test('formulaire configurable : champs', async () => {
   const ana = await (await req('POST', '/api/people', { name: 'Ana' })).json();
   await req('POST', '/api/active', { id: ana.id });
 
@@ -213,11 +210,10 @@ test('formulaire configurable : âge minimum et champs', async () => {
   assert.match(html, /Ton insta pour Ana/);
   assert.doesNotMatch(html, /name="phone"/);
   assert.doesNotMatch(html, /name="message"/);
-  assert.match(html, /J’ai 18 ans ou plus/);
 
-  let r = await form({ w: ana.id, phone: '5145550000', adult: '1' }, 'UA-cfg');
+  let r = await form({ w: ana.id, phone: '5145550000' }, 'UA-cfg');
   assert.match(await r.text(), /Laisse ton Instagram/);
-  r = await form({ w: ana.id, instagram: 'joe', adult: '1', message: 'ignoré' }, 'UA-cfg'); // ville optionnelle, message masqué
+  r = await form({ w: ana.id, instagram: 'joe', message: 'ignoré' }, 'UA-cfg'); // ville optionnelle, message masqué
   assert.equal(r.status, 303);
   const lead = (await (await req('GET', '/api/leads')).json())[0];
   assert.equal(lead.instagram, 'joe');

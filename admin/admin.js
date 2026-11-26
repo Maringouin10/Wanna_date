@@ -262,7 +262,7 @@ function leadHtml(l) {
   if (l.phone) acts.push(`<a class="sms" href="sms:${esc(l.phone)}">💬 Texto</a><a href="tel:${esc(l.phone)}">📞 ${esc(l.phoneRaw || l.phone)}</a>`);
   return `<div class="card lead${l.read ? '' : ' new'}">
     <div class="lh">${avatarHtml(p)}<div class="who">Pour <b>${esc(nameOf(l.wearerId))}</b> · ${ago(l.at)}</div></div>
-    ${l.age || l.city ? `<div class="tags">${l.age ? `<span>🎂 ${l.age} ans</span>` : ''}${l.city ? `<span>📍 ${esc(l.city)}</span>` : ''}</div>` : ''}
+    ${l.city ? `<div class="tags"><span>📍 ${esc(l.city)}</span></div>` : ''}
     <div class="msg">${esc(l.message)}</div>
     <div class="acts">${acts.join('')}<button class="del" data-del-lead="${esc(l.id)}" aria-label="Supprimer">🗑</button></div>
   </div>`;
