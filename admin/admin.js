@@ -382,6 +382,7 @@ function closeSession() {
 // ---------- Plus ----------
 
 function renderMore() {
+  if (!$('#formSettings').contains(document.activeElement)) renderFormSettings();
   $('#history').innerHTML = state.history.length
     ? state.history
         .slice(0, 20)
@@ -390,6 +391,92 @@ function renderMore() {
     : '<div class="empty">Aucun changement pour l’instant</div>';
   $('#qrUrl').textContent = `${state.publicUrl}/ · ${plural(state.scans.total, 'scan')} au total`;
 }
+
+// ---------- Réglages du formulaire ----------
+
+const FIELD_INFO = {
+  instagram: ['📸 Instagram', 'Leur @'],
+  phone: ['📱 Numéro', 'Pour texter ou appeler'],
+  age: ['🎂 Âge', 'Toujours demandé'],
+  city: ['📍 Ville', 'Pas de relation à distance'],
+  message: ['💬 Message', 'Pour convaincre'],
+};
+const MODE_LABELS = { hidden: 'Masqué', optional: 'Optionnel', required: 'Obligatoire' };
+let formDraft = null;
+
+function renderFormSettings() {
+  if (!formDraft) formDraft = JSON.parse(JSON.stringify(state.settings.form));
+  const f = formDraft;
+  const rows = Object.keys(FIELD_INFO)
+    .map((k) => {
+      const c = f.fields[k];
+      const [title, sub] = FIELD_INFO[k];
+      const seg =
+        k === 'age'
+          ? ''
+          : `<div class="seg">${Object.keys(MODE_LABELS)
+              .map((m) => `<button type="button" data-field="${k}" data-mode="${m}" class="${c.mode === m ? 'on' : ''}${m === 'required' ? ' req' : ''}">${MODE_LABELS[m]}</button>`)
+              .join('')}</div>`;
+      return `<div class="card fieldCfg${c.mode === 'hidden' ? ' hidden' : ''}">
+        <div class="fh"><b>${title}</b><span>${sub}</span></div>${seg}
+        <div class="texts">
+          <label>Titre<input data-text="${k}" data-prop="label" value="${esc(c.label)}" maxlength="60"></label>
+          <label>Exemple<input data-text="${k}" data-prop="placeholder" value="${esc(c.placeholder)}" maxlength="100"></label>
+        </div></div>`;
+    })
+    .join('');
+  $('#formSettings').innerHTML = `<div class="card ageRow"><div class="t"><b>Âge minimum</b><span>18 ans au minimum</span></div>
+      <div class="stepper"><button type="button" data-age="-1" ${f.minAge <= 18 ? 'disabled' : ''}>−</button>
+      <input id="minAge" type="number" inputmode="numeric" min="18" max="99" value="${f.minAge}">
+      <button type="button" data-age="1" ${f.minAge >= 99 ? 'disabled' : ''}>+</button></div></div>
+    ${rows}
+    <p class="hint" style="margin:0">Astuce : <b>{nom}</b> dans un titre est remplacé par le prénom de celui qui porte le chandail.
+      Si Instagram et numéro sont tous les deux optionnels, il faut au moins l’un des deux.</p>
+    <div class="formActions"><button type="button" class="ghost" id="formReset">Par défaut</button>
+      <button type="submit" class="primary">Enregistrer</button></div>
+    <a class="pill" style="text-align:center" href="/?preview" target="_blank" rel="noopener">Voir le formulaire ↗</a>`;
+}
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.dataset.text) formDraft.fields[t.dataset.text][t.dataset.prop] = t.value;
+  if (t.id === 'minAge') formDraft.minAge = Number(t.value);
+});
+
+document.addEventListener('click', (e) => {
+  const mode = e.target.closest('[data-mode]');
+  if (mode) {
+    formDraft.fields[mode.dataset.field].mode = mode.dataset.mode;
+    return renderFormSettings();
+  }
+  const step = e.target.closest('[data-age]');
+  if (step) {
+    formDraft.minAge = Math.min(99, Math.max(18, (Number(formDraft.minAge) || 18) + Number(step.dataset.age)));
+    return renderFormSettings();
+  }
+  if (e.target.closest('#formReset')) {
+    if (!confirm('Remettre le formulaire par défaut ? (pense à Enregistrer)')) return;
+    formDraft = JSON.parse(JSON.stringify(state.formDefaults));
+    return renderFormSettings();
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'formSettings') return;
+  e.preventDefault();
+  const btn = $('button[type=submit]', e.target);
+  btn.disabled = true;
+  try {
+    state.settings = await api('PUT', '/api/settings', { form: formDraft });
+    formDraft = null;
+    renderFormSettings();
+    toast('Formulaire enregistré ✅');
+  } catch (err) {
+    toast('⚠️ ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 // ---------- Navigation ----------
 

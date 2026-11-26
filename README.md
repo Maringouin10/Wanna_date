@@ -84,8 +84,11 @@ sur la page scanneur (bouton « ↻ une autre » pour en voir une autre, sans co
   qui scannent).
 - **Tap sur une personne** : c'est elle qui a le chandail maintenant. Effet immédiat sur le QR.
 - **✎** : modifier ou supprimer une fiche.
-- **Formulaire** : Insta *ou* numéro obligatoire, âge (18 ans et plus seulement), ville, message
-  (500 caractères max). Anti-spam : champ piège pour les robots et 3 messages max par
+- **Formulaire** : par défaut Insta *ou* numéro, âge (18 ans et plus), ville, message
+  (500 caractères max). Tout se règle dans **⚙️ Plus → Formulaire des scanneurs** : âge minimum
+  (jamais sous 18 ans), et pour chaque champ *Masqué / Optionnel / Obligatoire*, son titre et
+  son exemple (`{nom}` = prénom du porteur). L'âge est toujours demandé, et il faut garder au
+  moins Instagram ou le numéro. Anti-spam : champ piège pour les robots et 3 messages max par
   visiteur toutes les 10 minutes. Le message va à la personne affichée au moment du scan.
 - **QR code** : télécharge le SVG (vectoriel, parfait pour l'imprimeur) ou le PNG 2000 px.
   Correction d'erreur maximale (H) : il reste lisible même froissé sur un chandail.

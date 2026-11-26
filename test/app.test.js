@@ -187,6 +187,53 @@ test('pickup line activable depuis admin', async () => {
   await req('PUT', '/api/settings', { pickup: false });
 });
 
+test('formulaire configurable : âge minimum et champs', async () => {
+  const ana = await (await req('POST', '/api/people', { name: 'Ana' })).json();
+  await req('POST', '/api/active', { id: ana.id });
+
+  // Âge minimum sous 18 refusé, configuration sans moyen de contact refusée
+  assert.equal((await req('PUT', '/api/settings', { form: { minAge: 16 } })).status, 400);
+  assert.equal((await req('PUT', '/api/settings', { form: { fields: { instagram: { mode: 'hidden' }, phone: { mode: 'hidden' } } } })).status, 400);
+
+  const r0 = await req('PUT', '/api/settings', {
+    form: {
+      minAge: 21,
+      fields: {
+        instagram: { mode: 'required', label: 'Ton insta pour {nom}' },
+        phone: { mode: 'hidden' },
+        city: { mode: 'optional' },
+        message: { mode: 'hidden' },
+        age: { mode: 'hidden' }, // l'âge reste toujours obligatoire
+      },
+    },
+  });
+  assert.equal(r0.status, 200);
+  const cfg = (await r0.json()).form;
+  assert.equal(cfg.minAge, 21);
+  assert.equal(cfg.fields.age.mode, 'required');
+
+  const html = await (await req('GET', '/?preview')).text();
+  assert.match(html, /Ton insta pour Ana/);
+  assert.doesNotMatch(html, /name="phone"/);
+  assert.doesNotMatch(html, /name="message"/);
+  assert.match(html, /21 ans et plus/);
+
+  let r = await form({ w: ana.id, instagram: 'joe', age: '19' }, 'UA-cfg');
+  assert.match(await r.text(), /21 ans et plus/);
+  r = await form({ w: ana.id, phone: '5145550000', age: '25' }, 'UA-cfg');
+  assert.match(await r.text(), /Laisse ton Instagram/);
+  r = await form({ w: ana.id, instagram: 'joe', age: '25', message: 'ignoré' }, 'UA-cfg'); // ville optionnelle, message masqué
+  assert.equal(r.status, 303);
+  const lead = (await (await req('GET', '/api/leads')).json())[0];
+  assert.equal(lead.instagram, 'joe');
+  assert.equal(lead.message, '');
+
+  // Retour aux valeurs par défaut
+  const defaults = (await (await req('GET', '/api/state')).json()).formDefaults;
+  await req('PUT', '/api/settings', { form: defaults });
+  assert.match(await (await req('GET', '/?preview')).text(), /18 ans et plus/);
+});
+
 test('QR code', async () => {
   const r = await req('GET', '/api/qr.svg');
   assert.equal(r.status, 200);

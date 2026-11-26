@@ -7,6 +7,7 @@ const express = require('express');
 const QRCode = require('qrcode');
 const { Store } = require('./lib/store');
 const { Pickup } = require('./lib/pickup');
+const { normalizeForm, DEFAULT_FORM } = require('./lib/fields');
 const { renderForm, renderThanks, renderEmpty } = require('./lib/page');
 const { handle, phoneDigits } = require('./lib/links');
 
@@ -88,6 +89,14 @@ app.use((req, res, next) => {
   next();
 });
 
+const wrap = (fn) => (req, res) => {
+  try {
+    fn(req, res);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+};
+
 const publicUrl = (req) => PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
 
 
@@ -100,6 +109,8 @@ const visitorId = (req) =>
 
 // ---------- Public : ce qu'on voit en scannant le chandail ----------
 
+const formConfig = () => normalizeForm(store.data.settings.form);
+
 const randomPickup = () => {
   const st = store.data.settings;
   return st.pickup ? pickup.random(st.pickupLang) : null;
@@ -111,7 +122,7 @@ app.get('/', (req, res) => {
   const counted = req.query.preview === undefined && req.query.encore === undefined && !BOT_RE.test(req.get('user-agent') || '');
   if (counted) store.recordScan(visitorId(req));
   if (!p) return res.send(renderEmpty());
-  res.send(renderForm(p, { pickup: randomPickup() }));
+  res.send(renderForm(p, { pickup: randomPickup(), form: formConfig() }));
 });
 
 // Formulaire envoyé par quelqu'un qui a scanné le chandail.
@@ -130,19 +141,31 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
     city: String(b.city || '').replace(/\s+/g, ' ').trim().slice(0, 60),
     message: String(b.message || '').trim().slice(0, 500),
   };
-  const fail = (error) => res.status(400).send(renderForm(p, { values, error, pickup: randomPickup() }));
+  const form = formConfig();
+  const F = form.fields;
+  const fail = (error) => res.status(400).send(renderForm(p, { values, error, form, pickup: randomPickup() }));
+  // Un champ masqué est ignoré même si quelqu'un l'envoie quand même.
+  for (const k of ['instagram', 'phone', 'city', 'message']) if (F[k].mode === 'hidden') values[k] = '';
 
   const ig = handle(values.instagram);
   if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) return fail('Ce nom Instagram n’a pas l’air valide.');
   const tel = phoneDigits(values.phone);
   if (values.phone && (tel.replace(/\D/g, '').length < 7 || tel.replace(/\D/g, '').length > 15))
     return fail('Ce numéro de téléphone n’a pas l’air valide.');
-  if (!ig && !tel) return fail('Laisse au moins ton Instagram ou ton numéro, sinon on ne pourra pas te répondre 😉');
+  if (F.instagram.mode === 'required' && !ig) return fail('Laisse ton Instagram, sinon on ne pourra pas te répondre 😉');
+  if (F.phone.mode === 'required' && !tel) return fail('Laisse ton numéro, sinon on ne pourra pas te répondre 😉');
+  if (!ig && !tel) {
+    const both = F.instagram.mode !== 'hidden' && F.phone.mode !== 'hidden';
+    return fail(both ? 'Laisse au moins ton Instagram ou ton numéro, sinon on ne pourra pas te répondre 😉'
+      : `Laisse ton ${F.instagram.mode !== 'hidden' ? 'Instagram' : 'numéro'}, sinon on ne pourra pas te répondre 😉`);
+  }
   const age = Number(values.age);
   if (!Number.isInteger(age) || age < 1 || age > 99) return fail('Indique ton âge.');
-  if (age < 18) return fail('Désolé, c’est réservé aux 18 ans et plus.');
-  if (values.city.length < 2) return fail('Dis-nous dans quelle ville tu habites (pas de relation à distance 😉).');
-  if (values.message.length < 2) return fail(`Écris un petit message pour convaincre ${p.name} 😏`);
+  if (age < form.minAge) return fail(`Désolé, c’est réservé aux ${form.minAge} ans et plus.`);
+  if (F.city.mode === 'required' && values.city.length < 2)
+    return fail('Dis-nous dans quelle ville tu habites (pas de relation à distance 😉).');
+  if (F.message.mode === 'required' && values.message.length < 2)
+    return fail(`Écris un petit message pour convaincre ${p.name} 😏`);
 
   const v = visitorId(req);
   if (store.recentLeadsFrom(v, 10 * 60e3) >= 3) return fail('Wow, motivé! Attends quelques minutes avant de renvoyer un message.');
@@ -217,7 +240,8 @@ app.get('/api/state', requireAuth, (req, res) => {
       return { ...x, total: st.total, unique: st.unique };
     }),
     activeSessionId: store.activeSession()?.id || null,
-    settings: store.data.settings,
+    settings: { ...store.data.settings, form: formConfig() },
+    formDefaults: DEFAULT_FORM,
     unreadLeads: store.data.leads.filter((l) => !l.read).length,
     leadCounts: store.data.leads.reduce((acc, l) => ((acc[l.wearerId] = (acc[l.wearerId] || 0) + 1), acc), {}),
     pickup: pickup.info(),
@@ -252,7 +276,10 @@ app.delete('/api/leads/:id', requireAuth, (req, res) => {
   store.deleteLead(req.params.id) ? res.json({ ok: true }) : res.sendStatus(404);
 });
 
-app.put('/api/settings', requireAuth, (req, res) => res.json(store.setSettings(req.body || {})));
+app.put('/api/settings', requireAuth, wrap((req, res) => {
+  store.setSettings(req.body || {});
+  res.json({ ...store.data.settings, form: formConfig() });
+}));
 
 app.get('/api/pickup', requireAuth, (req, res) => {
   res.set('Cache-Control', 'no-store');
@@ -281,13 +308,6 @@ app.delete('/api/sessions/:id', requireAuth, (req, res) => {
   store.deleteSession(req.params.id) ? res.json({ ok: true }) : res.sendStatus(404);
 });
 
-const wrap = (fn) => (req, res) => {
-  try {
-    fn(req, res);
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-};
 
 app.post('/api/people', requireAuth, wrap((req, res) => res.json(store.create(req.body || {}))));
 
