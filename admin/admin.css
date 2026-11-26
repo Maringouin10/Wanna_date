@@ -186,7 +186,7 @@ dialog::backdrop { background: #000a; backdrop-filter: blur(4px); -webkit-backdr
 .lead .lh .avatar { width: 34px; height: 34px; font-size: 15px; }
 .lead .lh .who { flex: 1; min-width: 0; font-size: 14px; color: var(--mut); }
 .lead .lh .who b { color: var(--txt); }
-.lead .age { font-weight: 800; font-size: 15px; background: var(--card2); padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+.lead .age { font-weight: 800; font-size: 14px; background: var(--card2); padding: 4px 10px; border-radius: 99px; white-space: nowrap; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
 .lead .msg { font-size: 17px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
 .lead .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .lead .acts a, .lead .acts button { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 10px; border-radius: 12px; font-size: 14px; font-weight: 700; text-decoration: none; color: #fff; background: var(--card2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -198,3 +198,5 @@ dialog::backdrop { background: #000a; backdrop-filter: blur(4px); -webkit-backdr
 .newLeads .t { flex: 1; }
 .newLeads b { display: block; font-size: 18px; }
 .newLeads span { color: #ffffffb0; font-size: 14px; }
+.lead .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: -4px; }
+.lead .tags span { font-weight: 700; font-size: 15px; background: var(--card2); padding: 6px 12px; border-radius: 99px; }

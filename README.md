@@ -84,7 +84,7 @@ sur la page scanneur (bouton « ↻ une autre » pour en voir une autre, sans co
   qui scannent).
 - **Tap sur une personne** : c'est elle qui a le chandail maintenant. Effet immédiat sur le QR.
 - **✎** : modifier ou supprimer une fiche.
-- **Formulaire** : Insta *ou* numéro obligatoire, âge (18 ans et plus seulement), message
+- **Formulaire** : Insta *ou* numéro obligatoire, âge (18 ans et plus seulement), ville, message
   (500 caractères max). Anti-spam : champ piège pour les robots et 3 messages max par
   visiteur toutes les 10 minutes. Le message va à la personne affichée au moment du scan.
 - **QR code** : télécharge le SVG (vectoriel, parfait pour l'imprimeur) ou le PNG 2000 px.

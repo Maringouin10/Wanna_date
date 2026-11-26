@@ -127,6 +127,7 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
     instagram: String(b.instagram || '').trim().slice(0, 40),
     phone: String(b.phone || '').trim().slice(0, 25),
     age: String(b.age || '').trim().slice(0, 3),
+    city: String(b.city || '').replace(/\s+/g, ' ').trim().slice(0, 60),
     message: String(b.message || '').trim().slice(0, 500),
   };
   const fail = (error) => res.status(400).send(renderForm(p, { values, error, pickup: randomPickup() }));
@@ -140,6 +141,7 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
   const age = Number(values.age);
   if (!Number.isInteger(age) || age < 1 || age > 99) return fail('Indique ton âge.');
   if (age < 18) return fail('Désolé, c’est réservé aux 18 ans et plus.');
+  if (values.city.length < 2) return fail('Dis-nous dans quelle ville tu habites (pas de relation à distance 😉).');
   if (values.message.length < 2) return fail(`Écris un petit message pour convaincre ${p.name} 😏`);
 
   const v = visitorId(req);
@@ -152,6 +154,7 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
     phone: tel,
     phoneRaw: values.phone,
     age,
+    city: values.city,
     message: values.message,
     v,
   });

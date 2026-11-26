@@ -98,7 +98,11 @@ test('formulaire : les gens qui scannent laissent leurs infos', async () => {
   r = await form({ w: lea.id, instagram: '@tom"x', age: '25', message: '' });
   assert.equal(r.status, 400);
   // Valide
-  r = await form({ w: lea.id, instagram: 'https://instagram.com/tom.ski/', phone: '(514) 555-1234', age: '27', message: 'Je skie mieux que toi <3' });
+  // Ville obligatoire
+  r = await form({ w: lea.id, instagram: 'tom.ski', age: '27', message: 'Salut' });
+  assert.equal(r.status, 400);
+  assert.match(await r.text(), /ville/);
+  r = await form({ w: lea.id, instagram: 'https://instagram.com/tom.ski/', phone: '(514) 555-1234', age: '27', city: '  Saint-Sauveur ', message: 'Je skie mieux que toi <3' });
   assert.equal(r.status, 303);
   assert.match(r.headers.get('location'), /^\/merci/);
   assert.match(await (await fetch(BASE + r.headers.get('location'))).text(), /C’est envoyé/);
@@ -113,12 +117,14 @@ test('formulaire : les gens qui scannent laissent leurs infos', async () => {
   assert.equal(leads[0].instagram, 'tom.ski');
   assert.equal(leads[0].phone, '+15145551234');
   assert.equal(leads[0].age, 27);
+  assert.equal(leads[0].city, 'Saint-Sauveur');
   assert.equal(leads[0].wearerId, lea.id);
   assert.equal(leads[0].v, undefined); // l'empreinte du visiteur n'est pas exposée
 
   // Anti-spam : 3 messages max par 10 min
-  for (let i = 0; i < 2; i++) await form({ w: lea.id, instagram: 'tom.ski', age: '27', message: 'encore ' + i });
-  r = await form({ w: lea.id, instagram: 'tom.ski', age: '27', message: 'encore' });
+  for (let i = 0; i < 2; i++) await form({ w: lea.id, instagram: 'tom.ski', age: '27', city: 'Laval', message: 'encore ' + i });
+  r = await form({ w: lea.id, instagram: 'tom.ski', age: '27', city: 'Laval', message: 'encore' });
+  assert.match(await r.text(), /Attends quelques minutes/);
   assert.equal(r.status, 400);
 
   await req('POST', '/api/leads/read', {});

@@ -261,7 +261,8 @@ function leadHtml(l) {
   if (l.instagram) acts.push(`<a class="ig" href="https://instagram.com/${encodeURIComponent(l.instagram)}" target="_blank" rel="noopener">@${esc(l.instagram)}</a>`);
   if (l.phone) acts.push(`<a class="sms" href="sms:${esc(l.phone)}">💬 Texto</a><a href="tel:${esc(l.phone)}">📞 ${esc(l.phoneRaw || l.phone)}</a>`);
   return `<div class="card lead${l.read ? '' : ' new'}">
-    <div class="lh">${avatarHtml(p)}<div class="who">Pour <b>${esc(nameOf(l.wearerId))}</b> · ${ago(l.at)}</div><span class="age">${l.age} ans</span></div>
+    <div class="lh">${avatarHtml(p)}<div class="who">Pour <b>${esc(nameOf(l.wearerId))}</b> · ${ago(l.at)}</div></div>
+    <div class="tags"><span>🎂 ${l.age} ans</span>${l.city ? `<span>📍 ${esc(l.city)}</span>` : ''}</div>
     <div class="msg">${esc(l.message)}</div>
     <div class="acts">${acts.join('')}<button class="del" data-del-lead="${esc(l.id)}" aria-label="Supprimer">🗑</button></div>
   </div>`;
