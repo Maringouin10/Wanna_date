@@ -137,7 +137,7 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
   const values = {
     instagram: String(b.instagram || '').trim().slice(0, 40),
     phone: String(b.phone || '').trim().slice(0, 25),
-    age: String(b.age || '').trim().slice(0, 3),
+    adult: b.adult === '1',
     city: String(b.city || '').replace(/\s+/g, ' ').trim().slice(0, 60),
     message: String(b.message || '').trim().slice(0, 500),
   };
@@ -159,9 +159,7 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
     return fail(both ? 'Laisse au moins ton Instagram ou ton numéro, sinon on ne pourra pas te répondre 😉'
       : `Laisse ton ${F.instagram.mode !== 'hidden' ? 'Instagram' : 'numéro'}, sinon on ne pourra pas te répondre 😉`);
   }
-  const age = Number(values.age);
-  if (!Number.isInteger(age) || age < 1 || age > 99) return fail('Indique ton âge.');
-  if (age < form.minAge) return fail(`Désolé, c’est réservé aux ${form.minAge} ans et plus.`);
+  if (!values.adult) return fail('Coche la case « J’ai 18 ans ou plus » pour envoyer.');
   if (F.city.mode === 'required' && values.city.length < 2)
     return fail('Dis-nous dans quelle ville tu habites (pas de relation à distance 😉).');
   if (F.message.mode === 'required' && values.message.length < 2)
@@ -176,7 +174,6 @@ app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (re
     instagram: ig,
     phone: tel,
     phoneRaw: values.phone,
-    age,
     city: values.city,
     message: values.message,
     v,

@@ -262,7 +262,7 @@ function leadHtml(l) {
   if (l.phone) acts.push(`<a class="sms" href="sms:${esc(l.phone)}">💬 Texto</a><a href="tel:${esc(l.phone)}">📞 ${esc(l.phoneRaw || l.phone)}</a>`);
   return `<div class="card lead${l.read ? '' : ' new'}">
     <div class="lh">${avatarHtml(p)}<div class="who">Pour <b>${esc(nameOf(l.wearerId))}</b> · ${ago(l.at)}</div></div>
-    <div class="tags"><span>🎂 ${l.age} ans</span>${l.city ? `<span>📍 ${esc(l.city)}</span>` : ''}</div>
+    ${l.age || l.city ? `<div class="tags">${l.age ? `<span>🎂 ${l.age} ans</span>` : ''}${l.city ? `<span>📍 ${esc(l.city)}</span>` : ''}</div>` : ''}
     <div class="msg">${esc(l.message)}</div>
     <div class="acts">${acts.join('')}<button class="del" data-del-lead="${esc(l.id)}" aria-label="Supprimer">🗑</button></div>
   </div>`;
@@ -397,7 +397,6 @@ function renderMore() {
 const FIELD_INFO = {
   instagram: ['📸 Instagram', 'Leur @'],
   phone: ['📱 Numéro', 'Pour texter ou appeler'],
-  age: ['🎂 Âge', 'Toujours demandé'],
   city: ['📍 Ville', 'Pas de relation à distance'],
   message: ['💬 Message', 'Pour convaincre'],
 };
@@ -411,10 +410,7 @@ function renderFormSettings() {
     .map((k) => {
       const c = f.fields[k];
       const [title, sub] = FIELD_INFO[k];
-      const seg =
-        k === 'age'
-          ? ''
-          : `<div class="seg">${Object.keys(MODE_LABELS)
+      const seg = `<div class="seg">${Object.keys(MODE_LABELS)
               .map((m) => `<button type="button" data-field="${k}" data-mode="${m}" class="${c.mode === m ? 'on' : ''}${m === 'required' ? ' req' : ''}">${MODE_LABELS[m]}</button>`)
               .join('')}</div>`;
       return `<div class="card fieldCfg${c.mode === 'hidden' ? ' hidden' : ''}">
@@ -425,10 +421,7 @@ function renderFormSettings() {
         </div></div>`;
     })
     .join('');
-  $('#formSettings').innerHTML = `<div class="card ageRow"><div class="t"><b>Âge minimum</b><span>18 ans au minimum</span></div>
-      <div class="stepper"><button type="button" data-age="-1" ${f.minAge <= 18 ? 'disabled' : ''}>−</button>
-      <input id="minAge" type="number" inputmode="numeric" min="18" max="99" value="${f.minAge}">
-      <button type="button" data-age="1" ${f.minAge >= 99 ? 'disabled' : ''}>+</button></div></div>
+  $('#formSettings').innerHTML = `
     ${rows}
     <p class="hint" style="margin:0">Astuce : <b>{nom}</b> dans un titre est remplacé par le prénom de celui qui porte le chandail.
       Si Instagram et numéro sont tous les deux optionnels, il faut au moins l’un des deux.</p>
@@ -440,18 +433,12 @@ function renderFormSettings() {
 document.addEventListener('input', (e) => {
   const t = e.target;
   if (t.dataset.text) formDraft.fields[t.dataset.text][t.dataset.prop] = t.value;
-  if (t.id === 'minAge') formDraft.minAge = Number(t.value);
 });
 
 document.addEventListener('click', (e) => {
   const mode = e.target.closest('[data-mode]');
   if (mode) {
     formDraft.fields[mode.dataset.field].mode = mode.dataset.mode;
-    return renderFormSettings();
-  }
-  const step = e.target.closest('[data-age]');
-  if (step) {
-    formDraft.minAge = Math.min(99, Math.max(18, (Number(formDraft.minAge) || 18) + Number(step.dataset.age)));
     return renderFormSettings();
   }
   if (e.target.closest('#formReset')) {

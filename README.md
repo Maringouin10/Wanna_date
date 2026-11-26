@@ -2,7 +2,7 @@
 
 Un gros QR code sur un t-shirt « Wanna date? ». Quand quelqu'un le scanne, il voit la photo et
 le message de **celui qui porte le chandail aujourd'hui**, et peut tenter sa chance : il laisse
-son Instagram ou son numéro, son âge (18+) et un message pour convaincre. Tout arrive dans
+son Instagram ou son numéro, sa ville et un message pour convaincre. Tout arrive dans
 l'onglet **💌 Reçus** de l'admin.
 
 Le principe : défi de ski entre amis, le perdant doit porter le chandail. Après la journée,
@@ -84,12 +84,12 @@ sur la page scanneur (bouton « ↻ une autre » pour en voir une autre, sans co
   qui scannent).
 - **Tap sur une personne** : c'est elle qui a le chandail maintenant. Effet immédiat sur le QR.
 - **✎** : modifier ou supprimer une fiche.
-- **Formulaire** : par défaut Insta *ou* numéro, âge (18 ans et plus), ville, message
-  (500 caractères max). Tout se règle dans **⚙️ Plus → Formulaire des scanneurs** : âge minimum
-  (jamais sous 18 ans), et pour chaque champ *Masqué / Optionnel / Obligatoire*, son titre et
-  son exemple (`{nom}` = prénom du porteur). L'âge est toujours demandé, et il faut garder au
-  moins Instagram ou le numéro. Anti-spam : champ piège pour les robots et 3 messages max par
-  visiteur toutes les 10 minutes. Le message va à la personne affichée au moment du scan.
+- **Formulaire** : par défaut Insta *ou* numéro, ville et message (500 caractères max), plus
+  une case « J'ai 18 ans ou plus » à cocher (pas de question d'âge). Tout se règle dans
+  **⚙️ Plus → Formulaire des scanneurs** : pour chaque champ *Masqué / Optionnel / Obligatoire*,
+  son titre et son exemple (`{nom}` = prénom du porteur). Il faut garder au moins Instagram ou
+  le numéro. Anti-spam : champ piège pour les robots et 3 messages max par visiteur toutes les
+  10 minutes. Le message va à la personne affichée au moment du scan.
 - **QR code** : télécharge le SVG (vectoriel, parfait pour l'imprimeur) ou le PNG 2000 px.
   Correction d'erreur maximale (H) : il reste lisible même froissé sur un chandail.
 - **Hall of shame** : qui a perdu le plus souvent, et combien de scans chacun a récoltés.
