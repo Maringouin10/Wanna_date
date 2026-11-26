@@ -67,7 +67,8 @@ Les robots d'aperçu de liens (iMessage, Messenger, WhatsApp…) ne comptent pas
 Sur le Dashboard, l'interrupteur **Pickup line** ajoute une phrase de drague tirée au hasard
 sur la page scanneur (bouton « ↻ une autre » pour en voir une autre, sans compter un scan de plus).
 
-- **Français** : banque intégrée écrite à la main (la RizzAPI n'existe qu'en anglais).
+- **Français** : banque intégrée écrite à la main + les phrases `French` de la RizzAPI dès
+  qu'elles seront publiées (la doc liste le français, mais l'API répond encore « Language not found »).
 - **RizzAPI** (anglais) : toute la banque de https://rizzapi.vercel.app est téléchargée
   d'avance dans `/data/pickup-en.json` (au démarrage si le cache a plus d'une semaine,
   puis une fois par jour). L'API est lente, donc elle n'est jamais appelée pendant un scan.
