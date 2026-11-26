@@ -37,6 +37,7 @@
 
     <!-- Dashboard -->
     <main id="v-dash" class="view">
+      <div id="newLeads"></div>
       <div id="sessionCard"></div>
       <div class="card wearer">
         <div class="cardHead"><h2>Le chandail est sur</h2><button class="link" data-goto="team">Gérer</button></div>
@@ -47,10 +48,18 @@
       <div id="dashStats"></div>
     </main>
 
+    <!-- Messages reçus -->
+    <main id="v-inbox" class="view" hidden>
+      <div class="cardHead" style="margin:0"><h1>Reçus 💌</h1><button class="link" id="readAll">Tout marquer lu</button></div>
+      <p class="hint">Les gens qui ont scanné le chandail et veulent tenter leur chance.</p>
+      <div id="inboxFilter" class="chips flat"></div>
+      <div id="inbox"></div>
+    </main>
+
     <!-- Équipe -->
     <main id="v-team" class="view" hidden>
       <h1>Équipe</h1>
-      <p class="hint">Tap = cette personne porte le chandail. ✎ pour modifier sa fiche.</p>
+      <p class="hint">Tap = cette personne porte le chandail. ✎ pour modifier sa photo et son message.</p>
       <div id="grid" class="grid"></div>
       <h2 class="sec">Hall of shame 🏆</h2>
       <div id="leaderboard" class="card list"></div>
@@ -85,6 +94,7 @@
 
     <nav class="tabbar">
       <button data-tab="dash" class="on"><span>📊</span>Dashboard</button>
+      <button data-tab="inbox"><span>💌</span>Reçus<i id="badge" class="badge" hidden></i></button>
       <button data-tab="team"><span>👕</span>Équipe</button>
       <button data-tab="sessions"><span>⛷️</span>Sessions</button>
       <button data-tab="more"><span>⚙️</span>Plus</button>
@@ -103,22 +113,7 @@
         </div>
       </div>
       <label>Prénom / surnom *<input name="name" required maxlength="60" placeholder="Jake"></label>
-      <label>Petit message<textarea name="tagline" rows="2" maxlength="280" placeholder="J’ai perdu au ski, mais pas mon charme."></textarea></label>
-      <label>Instagram<input name="instagram" placeholder="@jake" autocapitalize="off" autocorrect="off"></label>
-      <label>Téléphone (texto / appel)<input name="phone" type="tel" placeholder="514 555-1234"></label>
-      <label>Snapchat<input name="snapchat" placeholder="jake.snap" autocapitalize="off" autocorrect="off"></label>
-      <label>TikTok<input name="tiktok" placeholder="@jake" autocapitalize="off" autocorrect="off"></label>
-      <label>Autre lien<input name="link" type="url" placeholder="https://…" autocapitalize="off"></label>
-      <label>Texte du lien<input name="linkLabel" placeholder="Mon Spotify"></label>
-      <label>Quand on scanne…
-        <select name="redirect">
-          <option value="">Afficher la page avec tous ses liens</option>
-          <option value="instagram">Ouvrir directement Instagram</option>
-          <option value="snapchat">Ouvrir directement Snapchat</option>
-          <option value="tiktok">Ouvrir directement TikTok</option>
-          <option value="link">Ouvrir directement l’autre lien</option>
-        </select>
-      </label>
+      <label>Petit message affiché aux gens qui scannent<textarea name="tagline" rows="2" maxlength="280" placeholder="J’ai perdu au ski, mais pas mon charme."></textarea></label>
       <p class="err" id="editErr"></p>
       <div class="row">
         <button type="button" class="ghost" id="editCancel">Annuler</button>

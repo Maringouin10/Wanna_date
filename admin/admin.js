@@ -64,9 +64,6 @@ function avatarHtml(p, cls = 'avatar') {
   return `<div class="${cls}">${esc(((p && p.name) || '?')[0].toUpperCase())}</div>`;
 }
 
-function nets(p) {
-  return [p.instagram && 'IG', p.phone && '📱', p.snapchat && 'Snap', p.tiktok && 'TikTok', p.link && '🔗'].filter(Boolean).join(' · ');
-}
 
 // ---------- Graphique : scans par tranche de temps ----------
 
@@ -166,8 +163,8 @@ function statsHtml(st) {
       <div class="s">${peak.n ? plural(peak.n, 'scan') : 'pas encore'}</div></div>
     <div class="kpi"><div class="k">Dernier scan</div><div class="v" style="font-size:22px">${last ? hm(last) : '—'}</div>
       <div class="s">${last ? ago(last) : 'aucun'}</div></div>
-    <div class="kpi"><div class="k">Passations</div><div class="v num">${st.handoffs.length}</div>
-      <div class="s">changement${st.handoffs.length > 1 ? 's' : ''} de porteur</div></div>
+    <div class="kpi"><div class="k">Messages reçus 💌</div><div class="v num">${st.leads}</div>
+      <div class="s">${st.unique ? Math.round((st.leads / st.unique) * 100) + ' % des visiteurs' : '—'}</div></div>
   </div>`;
 
   const ranked = Object.entries(st.byPerson).sort((a, b) => b[1] - a[1]);
@@ -175,7 +172,7 @@ function statsHtml(st) {
   const byPerson = ranked.length
     ? `<div class="card"><div class="cardHead"><h2>Scans par porteur</h2></div><div class="hbars">${ranked
         .map(([id, n]) => `<div class="hbar">${avatarHtml(person(id))}<div><div class="nm">${esc(nameOf(id))}</div>
-          <div class="track"><div class="fill" style="width:${(n / top) * 100}%"></div></div></div><div class="n num">${n}</div></div>`)
+          <div class="track"><div class="fill" style="width:${(n / top) * 100}%"></div></div></div><div class="n num">${n}<small style="display:block;color:var(--mut);font-size:11px;font-weight:600;text-align:right">${st.leadsByPerson[id] || 0} 💌</small></div></div>`)
         .join('')}</div></div>`
     : '';
 
@@ -213,12 +210,61 @@ async function renderDash() {
     .join('') || '<button class="chip" data-goto="team">＋ Ajouter des gens</button>';
 
   renderPickup();
+  $('#newLeads').innerHTML = state.unreadLeads
+    ? `<div class="card newLeads" data-goto="inbox"><div class="ic">💌</div><div class="t">
+        <b>${plural(state.unreadLeads, 'nouveau message')}</b><span>Quelqu’un veut tenter sa chance</span></div><span>›</span></div>`
+    : '';
 
   const q = live ? `session=${live.id}` : `from=${new Date().setHours(0, 0, 0, 0)}`;
   try {
     const st = await api('GET', '/api/stats?' + q);
     $('#dashStats').innerHTML = `<h2 class="sec">${live ? 'Stats de la session' : 'Aujourd’hui'}</h2>` + statsHtml(st);
   } catch {}
+}
+
+// ---------- Messages reçus ----------
+
+let leads = [];
+let inboxFilter = 'all';
+
+async function renderInbox() {
+  try {
+    leads = await api('GET', '/api/leads');
+  } catch {
+    return;
+  }
+  const counts = {};
+  for (const l of leads) counts[l.wearerId] = (counts[l.wearerId] || 0) + 1;
+  const ids = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  $('#inboxFilter').innerHTML = leads.length
+    ? `<button class="chip${inboxFilter === 'all' ? ' on' : ''}" data-filter="all">Tous <span class="cnt">${leads.length}</span></button>` +
+      ids.map((id) => `<button class="chip${inboxFilter === id ? ' on' : ''}" data-filter="${esc(id)}">${avatarHtml(person(id))}${esc(nameOf(id))} <span class="cnt">${counts[id]}</span></button>`).join('')
+    : '';
+  const shown = leads.filter((l) => inboxFilter === 'all' || l.wearerId === inboxFilter);
+  $('#inbox').innerHTML = shown.length
+    ? shown.map(leadHtml).join('')
+    : '<div class="card list"><div class="empty">Aucun message pour l’instant. Va skier avec le chandail ⛷️</div></div>';
+
+  // Ce qui est affiché est considéré comme lu (le surlignage reste jusqu'à la prochaine visite).
+  const unread = shown.filter((l) => !l.read).map((l) => l.id);
+  if (unread.length) {
+    await api('POST', '/api/leads/read', { ids: unread }).catch(() => {});
+    state.unreadLeads = Math.max(0, (state.unreadLeads || 0) - unread.length);
+    $('#badge').hidden = !state.unreadLeads;
+    $('#badge').textContent = state.unreadLeads;
+  }
+}
+
+function leadHtml(l) {
+  const p = person(l.wearerId);
+  const acts = [];
+  if (l.instagram) acts.push(`<a class="ig" href="https://instagram.com/${encodeURIComponent(l.instagram)}" target="_blank" rel="noopener">@${esc(l.instagram)}</a>`);
+  if (l.phone) acts.push(`<a class="sms" href="sms:${esc(l.phone)}">💬 Texto</a><a href="tel:${esc(l.phone)}">📞 ${esc(l.phoneRaw || l.phone)}</a>`);
+  return `<div class="card lead${l.read ? '' : ' new'}">
+    <div class="lh">${avatarHtml(p)}<div class="who">Pour <b>${esc(nameOf(l.wearerId))}</b> · ${ago(l.at)}</div><span class="age">${l.age} ans</span></div>
+    <div class="msg">${esc(l.message)}</div>
+    <div class="acts">${acts.join('')}<button class="del" data-del-lead="${esc(l.id)}" aria-label="Supprimer">🗑</button></div>
+  </div>`;
 }
 
 // ---------- Pickup line ----------
@@ -254,6 +300,10 @@ async function nextPickup() {
 async function saveSettings(patch) {
   state.settings = { ...state.settings, ...patch };
   renderPickup();
+  $('#newLeads').innerHTML = state.unreadLeads
+    ? `<div class="card newLeads" data-goto="inbox"><div class="ic">💌</div><div class="t">
+        <b>${plural(state.unreadLeads, 'nouveau message')}</b><span>Quelqu’un veut tenter sa chance</span></div><span>›</span></div>`
+    : '';
   try {
     state.settings = await api('PUT', '/api/settings', patch);
   } catch (e) {
@@ -270,7 +320,7 @@ function renderTeam() {
       .map(
         (p) => `<div class="person ${p.id === state.activeId ? 'on' : ''}" data-wear="${esc(p.id)}">
           <button class="edit" data-edit="${esc(p.id)}" aria-label="Modifier">✎</button>
-          ${avatarHtml(p)}<div class="nm">${esc(p.name)}</div><div class="nets">${esc(nets(p)) || 'aucun réseau'}</div></div>`
+          ${avatarHtml(p)}<div class="nm">${esc(p.name)}</div><div class="nets">${plural((state.leadCounts || {})[p.id] || 0, 'message')} 💌</div></div>`
       )
       .join('') + `<div class="person add" id="addBtn"><div class="plus">＋</div><div>Ajouter</div></div>`;
 
@@ -345,6 +395,10 @@ function renderMore() {
 function render() {
   if (tab === 'dash') renderDash();
   if (tab === 'team') renderTeam();
+  if (tab === 'inbox') renderInbox();
+  const badge = $('#badge');
+  badge.hidden = !state.unreadLeads;
+  badge.textContent = state.unreadLeads > 99 ? '99+' : state.unreadLeads;
   if (tab === 'sessions') renderSessions();
   if (tab === 'more') renderMore();
 }
@@ -393,6 +447,22 @@ document.addEventListener('click', async (e) => {
   const wear = t.closest('[data-wear]');
   if (wear) return setActive(wear.dataset.wear);
 
+  const filter = t.closest('[data-filter]');
+  if (filter) {
+    inboxFilter = filter.dataset.filter;
+    return renderInbox();
+  }
+  const delLead = t.closest('[data-del-lead]');
+  if (delLead) {
+    if (!confirm('Supprimer ce message ?')) return;
+    await api('DELETE', `/api/leads/${delLead.dataset.delLead}`);
+    toast('Message supprimé');
+    return refresh();
+  }
+  if (t.closest('#readAll')) {
+    await api('POST', '/api/leads/read', {});
+    return refresh();
+  }
   if (t.closest('#pickupToggle')) {
     const on = !state.settings.pickup;
     await saveSettings({ pickup: on });
@@ -458,7 +528,7 @@ function openEditor(p) {
   pendingPhoto = undefined;
   const f = $('#editForm');
   f.reset();
-  for (const k of ['name', 'tagline', 'instagram', 'phone', 'snapchat', 'tiktok', 'link', 'linkLabel', 'redirect'])
+  for (const k of ['name', 'tagline'])
     f.elements[k].value = (p && p[k]) || '';
   $('#editTitle').textContent = p ? `Modifier ${p.name}` : 'Nouvelle personne';
   $('#editDelete').hidden = !p;
@@ -533,7 +603,7 @@ $('#editForm').addEventListener('submit', async (e) => {
 $('#editCancel').addEventListener('click', () => $('#editor').close());
 
 $('#editDelete').addEventListener('click', async () => {
-  if (!editing || !confirm(`Supprimer ${editing.name} de la banque ?`)) return;
+  if (!editing || !confirm(`Supprimer ${editing.name} de la banque ? Ses messages reçus seront aussi effacés.`)) return;
   try {
     await api('DELETE', `/api/people/${editing.id}`);
     $('#editor').close();
@@ -582,7 +652,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && !$('#app').hidden) refresh().catch(() => {});
 });
 setInterval(() => {
-  if (!document.hidden && !$('#app').hidden && (tab === 'dash' || openSessionId) && !$('#editor').open) refresh().catch(() => {});
+  if (!document.hidden && !$('#app').hidden && (tab === 'dash' || tab === 'inbox' || openSessionId) && !$('#editor').open) refresh().catch(() => {});
 }, 20000);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' }).catch(() => {});

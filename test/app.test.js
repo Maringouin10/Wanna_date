@@ -5,7 +5,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { linksFor } = require('../lib/links');
+const { linksFor, handle } = require('../lib/links');
 
 const PORT = 3999;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -30,6 +30,7 @@ const req = (method, url, body) =>
 
 test('liens normalisés', () => {
   const l = linksFor({ instagram: 'https://www.instagram.com/jake.ski/', phone: '(514) 555-1234', snapchat: '@jk', tiktok: '', link: 'spotify.com/x' });
+  assert.equal(handle('@tom.ski'), 'tom.ski');
   assert.equal(l.instagram.url, 'https://instagram.com/jake.ski');
   assert.equal(l.phone.call, 'tel:+15145551234');
   assert.equal(l.snapchat.url, 'https://www.snapchat.com/add/jk');
@@ -47,27 +48,30 @@ test('admin protégé', async () => {
   assert.equal((await req('GET', '/api/state')).status, 200);
 });
 
+const form = (body, ua = 'Test') =>
+  fetch(BASE + '/envoyer', {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'user-agent': ua },
+    body: new URLSearchParams(body),
+  });
+
 test('banque + bascule du porteur', async () => {
   let r = await req('GET', '/');
   assert.match(await r.text(), /en transit/);
 
-  const jake = await (await req('POST', '/api/people', { name: 'Jake', instagram: '@jake', phone: '514 555 1234', tagline: '<b>salut</b>' })).json();
-  const marin = await (await req('POST', '/api/people', { name: 'Marin', instagram: 'marin', redirect: 'instagram' })).json();
+  const jake = await (await req('POST', '/api/people', { name: 'Jake', tagline: '<b>salut</b>' })).json();
+  const marin = await (await req('POST', '/api/people', { name: 'Marin' })).json();
   assert.equal((await req('POST', '/api/people', { name: '  ' })).status, 400);
 
   await req('POST', '/api/active', { id: jake.id });
   let html = await (await req('GET', '/')).text();
   assert.match(html, /Jake/);
-  assert.match(html, /instagram\.com\/jake/);
-  assert.match(html, /sms:\+15145551234/);
+  assert.match(html, /action="\/envoyer"/);
   assert.match(html, /&lt;b&gt;salut/); // échappé
-  assert.match(await (await req('GET', '/vcard')).text(), /TEL;TYPE=CELL:\+15145551234/);
 
   await req('POST', '/api/active', { id: marin.id });
-  r = await req('GET', '/');
-  assert.equal(r.status, 302);
-  assert.equal(r.headers.get('location'), 'https://instagram.com/marin');
-  assert.match(await (await req('GET', '/?preview')).text(), /Marin/);
+  assert.match(await (await req('GET', '/')).text(), /Convaincs Marin/);
 
   const st = await (await req('GET', '/api/state')).json();
   assert.equal(st.activeId, marin.id);
@@ -78,8 +82,55 @@ test('banque + bascule du porteur', async () => {
   assert.equal((await (await req('GET', '/api/state')).json()).activeId, null);
 });
 
+test('formulaire : les gens qui scannent laissent leurs infos', async () => {
+  const lea = await (await req('POST', '/api/people', { name: 'Léa' })).json();
+  await req('POST', '/api/active', { id: lea.id });
+
+  // Ni Insta ni numéro
+  let r = await form({ w: lea.id, age: '25', message: 'Salut' });
+  assert.equal(r.status, 400);
+  assert.match(await r.text(), /au moins ton Instagram ou ton numéro/);
+  // Mineur refusé
+  r = await form({ w: lea.id, instagram: 'kid', age: '16', message: 'Salut' });
+  assert.equal(r.status, 400);
+  assert.match(await r.text(), /18 ans et plus/);
+  // Message requis, valeurs conservées et échappées
+  r = await form({ w: lea.id, instagram: '@tom"x', age: '25', message: '' });
+  assert.equal(r.status, 400);
+  // Valide
+  r = await form({ w: lea.id, instagram: 'https://instagram.com/tom.ski/', phone: '(514) 555-1234', age: '27', message: 'Je skie mieux que toi <3' });
+  assert.equal(r.status, 303);
+  assert.match(r.headers.get('location'), /^\/merci/);
+  assert.match(await (await fetch(BASE + r.headers.get('location'))).text(), /C’est envoyé/);
+  // Robot (champ piège) : ignoré silencieusement
+  r = await form({ w: lea.id, instagram: 'bot', age: '30', message: 'spam', website: 'x' });
+  assert.equal(r.status, 303);
+
+  let state = await (await req('GET', '/api/state')).json();
+  assert.equal(state.unreadLeads, 1);
+  const leads = await (await req('GET', '/api/leads')).json();
+  assert.equal(leads.length, 1);
+  assert.equal(leads[0].instagram, 'tom.ski');
+  assert.equal(leads[0].phone, '+15145551234');
+  assert.equal(leads[0].age, 27);
+  assert.equal(leads[0].wearerId, lea.id);
+  assert.equal(leads[0].v, undefined); // l'empreinte du visiteur n'est pas exposée
+
+  // Anti-spam : 3 messages max par 10 min
+  for (let i = 0; i < 2; i++) await form({ w: lea.id, instagram: 'tom.ski', age: '27', message: 'encore ' + i });
+  r = await form({ w: lea.id, instagram: 'tom.ski', age: '27', message: 'encore' });
+  assert.equal(r.status, 400);
+
+  await req('POST', '/api/leads/read', {});
+  assert.equal((await (await req('GET', '/api/state')).json()).unreadLeads, 0);
+  assert.equal((await req('DELETE', `/api/leads/${leads[0].id}`)).status, 200);
+  const st = await (await req('GET', '/api/stats?from=0')).json();
+  assert.equal(st.leads, 2);
+  assert.equal(st.leadsByPerson[lea.id], 2);
+});
+
 test('page scanneur sans pied de page + robots ignorés', async () => {
-  const jake = await (await req('POST', '/api/people', { name: 'Zed', instagram: 'zed' })).json();
+  const jake = await (await req('POST', '/api/people', { name: 'Zed' })).json();
   await req('POST', '/api/active', { id: jake.id });
   const before = (await (await req('GET', '/api/state')).json()).scans.total;
   const html = await (await req('GET', '/')).text();

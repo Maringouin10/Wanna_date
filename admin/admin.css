@@ -173,3 +173,28 @@ dialog::backdrop { background: #000a; backdrop-filter: blur(4px); -webkit-backdr
 .rizzPreview q { flex: 1; quotes: "« " " »"; }
 .rizzPreview button { padding: 2px 8px; background: none; color: var(--pink); font-size: 18px; }
 .pickupCard.off .seg, .pickupCard.off .rizzPreview { opacity: .45; }
+
+/* Messages reçus */
+.tabbar button { position: relative; }
+.badge { position: absolute; top: 2px; left: 50%; margin-left: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--pink); color: #fff; font: 800 11px/18px inherit; font-style: normal; text-align: center; }
+.chips.flat { margin: 0 -16px; }
+.chip .cnt { color: var(--mut); font-size: 13px; }
+.chip.on .cnt { color: #ffffffcc; }
+.lead { display: flex; flex-direction: column; gap: 12px; }
+.lead.new { border-color: #ff2e7488; box-shadow: 0 0 0 1px #ff2e7444, 0 0 24px #ff2e7422; }
+.lead .lh { display: flex; align-items: center; gap: 10px; }
+.lead .lh .avatar { width: 34px; height: 34px; font-size: 15px; }
+.lead .lh .who { flex: 1; min-width: 0; font-size: 14px; color: var(--mut); }
+.lead .lh .who b { color: var(--txt); }
+.lead .age { font-weight: 800; font-size: 15px; background: var(--card2); padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+.lead .msg { font-size: 17px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.lead .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.lead .acts a, .lead .acts button { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 10px; border-radius: 12px; font-size: 14px; font-weight: 700; text-decoration: none; color: #fff; background: var(--card2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lead .acts .ig { background: linear-gradient(45deg, #f09433, #dc2743, #bc1888); }
+.lead .acts .sms { background: #25d366; }
+.lead .acts .del { flex: 0 0 44px; color: var(--red); }
+.newLeads { display: flex; align-items: center; gap: 12px; cursor: pointer; background: linear-gradient(135deg, #3a1556, #4b0f2e); border-color: #ff2e7466; }
+.newLeads .ic { font-size: 30px; }
+.newLeads .t { flex: 1; }
+.newLeads b { display: block; font-size: 18px; }
+.newLeads span { color: #ffffffb0; font-size: 14px; }

@@ -7,7 +7,8 @@ const express = require('express');
 const QRCode = require('qrcode');
 const { Store } = require('./lib/store');
 const { Pickup } = require('./lib/pickup');
-const { renderPerson, renderEmpty, vcard, linksFor } = require('./lib/page');
+const { renderForm, renderThanks, renderEmpty } = require('./lib/page');
+const { handle, phoneDigits } = require('./lib/links');
 
 const PORT = Number(process.env.PORT) || 3003;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -89,11 +90,6 @@ app.use((req, res, next) => {
 
 const publicUrl = (req) => PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
 
-function directUrl(p) {
-  if (!p.redirect) return null;
-  const l = linksFor(p)[p.redirect];
-  return l ? l.url : null;
-}
 
 // Les robots d'aperçu (iMessage, Messenger, etc.) ne comptent pas comme des scans.
 const BOT_RE = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slack|discord|telegram|curl|wget/i;
@@ -104,26 +100,67 @@ const visitorId = (req) =>
 
 // ---------- Public : ce qu'on voit en scannant le chandail ----------
 
+const randomPickup = () => {
+  const st = store.data.settings;
+  return st.pickup ? pickup.random(st.pickupLang) : null;
+};
+
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store'); // le porteur change : jamais de cache
   const p = store.active();
   const counted = req.query.preview === undefined && req.query.encore === undefined && !BOT_RE.test(req.get('user-agent') || '');
   if (counted) store.recordScan(visitorId(req));
   if (!p) return res.send(renderEmpty());
-  const direct = req.query.preview === undefined && directUrl(p);
-  if (direct) return res.redirect(302, direct);
-  const st = store.data.settings;
-  res.send(renderPerson(p, { pickup: st.pickup ? pickup.random(st.pickupLang) : null }));
+  res.send(renderForm(p, { pickup: randomPickup() }));
 });
 
-app.get('/vcard', (req, res) => {
-  const p = store.active();
-  if (!p) return res.redirect('/');
-  const filename = p.name.replace(/[^\w-]+/g, '_') || 'contact';
+// Formulaire envoyé par quelqu'un qui a scanné le chandail.
+app.post('/envoyer', express.urlencoded({ extended: false, limit: '10kb' }), (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.set('Content-Type', 'text/vcard; charset=utf-8');
-  res.set('Content-Disposition', `inline; filename="${filename}.vcf"`);
-  res.send(vcard(p));
+  const b = req.body || {};
+  // Le message va à la personne affichée au moment du scan (même si le chandail a changé depuis).
+  const p = store.get(String(b.w || '')) || store.active();
+  if (!p) return res.send(renderEmpty());
+  if (b.website) return res.redirect(303, '/merci'); // robot (champ piège rempli)
+
+  const values = {
+    instagram: String(b.instagram || '').trim().slice(0, 40),
+    phone: String(b.phone || '').trim().slice(0, 25),
+    age: String(b.age || '').trim().slice(0, 3),
+    message: String(b.message || '').trim().slice(0, 500),
+  };
+  const fail = (error) => res.status(400).send(renderForm(p, { values, error, pickup: randomPickup() }));
+
+  const ig = handle(values.instagram);
+  if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) return fail('Ce nom Instagram n’a pas l’air valide.');
+  const tel = phoneDigits(values.phone);
+  if (values.phone && (tel.replace(/\D/g, '').length < 7 || tel.replace(/\D/g, '').length > 15))
+    return fail('Ce numéro de téléphone n’a pas l’air valide.');
+  if (!ig && !tel) return fail('Laisse au moins ton Instagram ou ton numéro, sinon on ne pourra pas te répondre 😉');
+  const age = Number(values.age);
+  if (!Number.isInteger(age) || age < 1 || age > 99) return fail('Indique ton âge.');
+  if (age < 18) return fail('Désolé, c’est réservé aux 18 ans et plus.');
+  if (values.message.length < 2) return fail(`Écris un petit message pour convaincre ${p.name} 😏`);
+
+  const v = visitorId(req);
+  if (store.recentLeadsFrom(v, 10 * 60e3) >= 3) return fail('Wow, motivé! Attends quelques minutes avant de renvoyer un message.');
+
+  store.addLead({
+    wearerId: p.id,
+    sessionId: store.activeSession()?.id || null,
+    instagram: ig,
+    phone: tel,
+    phoneRaw: values.phone,
+    age,
+    message: values.message,
+    v,
+  });
+  res.redirect(303, `/merci?w=${encodeURIComponent(p.id)}`);
+});
+
+app.get('/merci', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.send(renderThanks(store.get(String(req.query.w || '')) || null));
 });
 
 app.get('/photo/:id', (req, res) => {
@@ -178,6 +215,8 @@ app.get('/api/state', requireAuth, (req, res) => {
     }),
     activeSessionId: store.activeSession()?.id || null,
     settings: store.data.settings,
+    unreadLeads: store.data.leads.filter((l) => !l.read).length,
+    leadCounts: store.data.leads.reduce((acc, l) => ((acc[l.wearerId] = (acc[l.wearerId] || 0) + 1), acc), {}),
     pickup: pickup.info(),
     publicUrl: publicUrl(req),
   });
@@ -194,6 +233,20 @@ app.get('/api/stats', requireAuth, (req, res) => {
   const from = Number(req.query.from) || Date.now() - 864e5;
   const to = Number(req.query.to) || Date.now();
   res.json({ session: null, ...store.stats(from, to) });
+});
+
+app.get('/api/leads', requireAuth, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(store.data.leads.map(({ v, ...l }) => l));
+});
+
+app.post('/api/leads/read', requireAuth, (req, res) => {
+  store.markLeadsRead(Array.isArray(req.body?.ids) ? req.body.ids : null);
+  res.json({ ok: true });
+});
+
+app.delete('/api/leads/:id', requireAuth, (req, res) => {
+  store.deleteLead(req.params.id) ? res.json({ ok: true }) : res.sendStatus(404);
 });
 
 app.put('/api/settings', requireAuth, (req, res) => res.json(store.setSettings(req.body || {})));
