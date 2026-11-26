@@ -47,7 +47,7 @@ wannadate.exemple.com {
 L'admin a 4 onglets en bas de l'écran :
 
 - **💌 Reçus** : les messages laissés par les gens qui ont scanné (Insta, texto/appel en un tap,
-  âge, message), filtrables par porteur. Pastille rouge = nouveaux messages.
+  ville, message), filtrables par porteur. Pastille rouge = nouveaux messages.
 - **📊 Dashboard** : démarrer/terminer une session de ski, changer le porteur en un tap,
   et les stats en direct (scans, visiteurs uniques, heure de pointe, dernier scan,
   graphique des scans par heure, scans par porteur, passations).
