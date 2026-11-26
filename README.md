@@ -30,7 +30,7 @@ Exemple Caddy :
 
 ```
 wannadate.exemple.com {
-    reverse_proxy localhost:3000
+    reverse_proxy localhost:3003
 }
 ```
 
@@ -59,7 +59,7 @@ wannadate.exemple.com {
 |------------------|-------------------------------------------------------------------|
 | `ADMIN_PASSWORD` | Mot de passe de `/admin` (obligatoire). Le changer déconnecte tout le monde. |
 | `PUBLIC_URL`     | URL encodée dans le QR code. Vide = adresse utilisée pour ouvrir l'admin. |
-| `HOST_PORT`      | Port exposé sur l'hôte (défaut 3000).                             |
+| `HOST_PORT`      | Port exposé sur l'hôte (défaut 3003).                             |
 | `TZ`             | Fuseau pour les dates (défaut `America/Toronto`).                 |
 
 ## Développement

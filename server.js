@@ -8,7 +8,7 @@ const QRCode = require('qrcode');
 const { Store } = require('./lib/store');
 const { renderPerson, renderEmpty, vcard, linksFor } = require('./lib/page');
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3003;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const PUBLIC_URL = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
