@@ -62,6 +62,17 @@ Les « visiteurs uniques » sont calculés à partir d'une empreinte anonyme (ha
 de l'IP + navigateur) : aucune donnée personnelle des gens qui scannent n'est stockée.
 Les robots d'aperçu de liens (iMessage, Messenger, WhatsApp…) ne comptent pas.
 
+### Pickup lines 💬
+
+Sur le Dashboard, l'interrupteur **Pickup line** ajoute une phrase de drague tirée au hasard
+sur la page scanneur (bouton « ↻ une autre » pour en voir une autre, sans compter un scan de plus).
+
+- **Français** : banque intégrée écrite à la main (la RizzAPI n'existe qu'en anglais).
+- **RizzAPI** (anglais) : toute la banque de https://rizzapi.vercel.app est téléchargée
+  d'avance dans `/data/pickup-en.json` (au démarrage si le cache a plus d'une semaine,
+  puis une fois par jour). L'API est lente, donc elle n'est jamais appelée pendant un scan.
+  Les blagues déplacées sont filtrées. `PICKUP_FETCH=off` désactive le téléchargement.
+
 ### Détails
 
 - **＋ Ajouter** : crée une fiche dans la banque (photo, petit message, Instagram, téléphone,

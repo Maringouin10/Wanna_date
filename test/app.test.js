@@ -15,7 +15,7 @@ before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wd-'));
   proc = spawn('node', ['server.js'], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT, DATA_DIR: dir, ADMIN_PASSWORD: 'secret' },
+    env: { ...process.env, PORT, DATA_DIR: dir, ADMIN_PASSWORD: 'secret', PICKUP_FETCH: 'off' },
     stdio: 'ignore',
   });
   for (let i = 0; i < 50; i++) {
@@ -113,6 +113,21 @@ test('sessions de ski + stats', async () => {
   assert.equal(st.session.name, 'Mont-Tremblant');
   assert.equal((await req('DELETE', `/api/sessions/${s2.id}`)).status, 200);
   assert.equal((await req('GET', `/api/stats?session=${s2.id}`)).status, 404);
+});
+
+test('pickup line activable depuis admin', async () => {
+  const z = await (await req('POST', '/api/people', { name: 'Rizz', instagram: 'rizz' })).json();
+  await req('POST', '/api/active', { id: z.id });
+  assert.doesNotMatch(await (await req('GET', '/')).text(), /class="rizz"/);
+  const st = await (await req('PUT', '/api/settings', { pickup: true, pickupLang: 'fr' })).json();
+  assert.equal(st.pickup, true);
+  const html = await (await req('GET', '/')).text();
+  assert.match(html, /class="rizz"/);
+  const before = (await (await req('GET', '/api/state')).json()).scans.total;
+  await req('GET', '/?encore'); // « une autre » ne compte pas comme un scan
+  assert.equal((await (await req('GET', '/api/state')).json()).scans.total, before);
+  assert.ok((await (await req('GET', '/api/pickup?lang=fr')).json()).line.length > 10);
+  await req('PUT', '/api/settings', { pickup: false });
 });
 
 test('QR code', async () => {

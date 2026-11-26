@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const express = require('express');
 const QRCode = require('qrcode');
 const { Store } = require('./lib/store');
+const { Pickup } = require('./lib/pickup');
 const { renderPerson, renderEmpty, vcard, linksFor } = require('./lib/page');
 
 const PORT = Number(process.env.PORT) || 3003;
@@ -20,6 +21,8 @@ if (!ADMIN_PASSWORD) {
 }
 
 const store = new Store(DATA_DIR);
+const pickup = new Pickup(DATA_DIR);
+if (process.env.PICKUP_FETCH !== 'off') pickup.schedule();
 
 // Secret de session persistant (généré une seule fois dans le volume).
 const secretFile = path.join(DATA_DIR, '.session-secret');
@@ -104,12 +107,13 @@ const visitorId = (req) =>
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store'); // le porteur change : jamais de cache
   const p = store.active();
-  const counted = req.query.preview === undefined && !BOT_RE.test(req.get('user-agent') || '');
+  const counted = req.query.preview === undefined && req.query.encore === undefined && !BOT_RE.test(req.get('user-agent') || '');
   if (counted) store.recordScan(visitorId(req));
   if (!p) return res.send(renderEmpty());
   const direct = req.query.preview === undefined && directUrl(p);
   if (direct) return res.redirect(302, direct);
-  res.send(renderPerson(p));
+  const st = store.data.settings;
+  res.send(renderPerson(p, { pickup: st.pickup ? pickup.random(st.pickupLang) : null }));
 });
 
 app.get('/vcard', (req, res) => {
@@ -173,6 +177,8 @@ app.get('/api/state', requireAuth, (req, res) => {
       return { ...x, total: st.total, unique: st.unique };
     }),
     activeSessionId: store.activeSession()?.id || null,
+    settings: store.data.settings,
+    pickup: pickup.info(),
     publicUrl: publicUrl(req),
   });
 });
@@ -188,6 +194,19 @@ app.get('/api/stats', requireAuth, (req, res) => {
   const from = Number(req.query.from) || Date.now() - 864e5;
   const to = Number(req.query.to) || Date.now();
   res.json({ session: null, ...store.stats(from, to) });
+});
+
+app.put('/api/settings', requireAuth, (req, res) => res.json(store.setSettings(req.body || {})));
+
+app.get('/api/pickup', requireAuth, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const lang = req.query.lang === 'en' ? 'en' : 'fr';
+  res.json({ line: pickup.random(lang), ...pickup.info() });
+});
+
+app.post('/api/pickup/refresh', requireAuth, async (req, res) => {
+  await pickup.refresh();
+  res.json(pickup.info());
 });
 
 app.post('/api/sessions', requireAuth, (req, res) => res.json(store.startSession(req.body?.name)));

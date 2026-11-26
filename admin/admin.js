@@ -212,11 +212,54 @@ async function renderDash() {
     .map((p) => `<button class="chip${p.id === state.activeId ? ' on' : ''}" data-wear="${esc(p.id)}">${avatarHtml(p)}${esc(p.name)}</button>`)
     .join('') || '<button class="chip" data-goto="team">＋ Ajouter des gens</button>';
 
+  renderPickup();
+
   const q = live ? `session=${live.id}` : `from=${new Date().setHours(0, 0, 0, 0)}`;
   try {
     const st = await api('GET', '/api/stats?' + q);
     $('#dashStats').innerHTML = `<h2 class="sec">${live ? 'Stats de la session' : 'Aujourd’hui'}</h2>` + statsHtml(st);
   } catch {}
+}
+
+// ---------- Pickup line ----------
+
+let pickupPreview = null;
+
+function renderPickup() {
+  const st = state.settings || { pickup: false, pickupLang: 'fr' };
+  const info = state.pickup || { fr: 0, en: 0 };
+  const el = $('#pickupCard');
+  el.className = 'card pickupCard' + (st.pickup ? '' : ' off');
+  el.innerHTML = `<div class="toggleRow"><div class="t"><b>💬 Pickup line</b>
+      <span>${st.pickup ? 'Affichée au hasard à chaque scan' : 'Désactivée'}</span></div>
+      <button class="switch${st.pickup ? ' on' : ''}" id="pickupToggle" role="switch" aria-checked="${st.pickup}" aria-label="Pickup line"></button></div>
+    <div class="seg">
+      <button data-lang="fr" class="${st.pickupLang === 'fr' ? 'on' : ''}">🇫🇷 Français (${info.fr})</button>
+      <button data-lang="en" class="${st.pickupLang === 'en' ? 'on' : ''}" ${info.en ? '' : 'disabled'}>🇺🇸 RizzAPI (${info.en || '…'})</button>
+    </div>
+    <div class="rizzPreview"><q>${esc(pickupPreview || '…')}</q><button id="pickupNext" aria-label="Une autre">↻</button></div>`;
+  if (!pickupPreview) nextPickup();
+}
+
+async function nextPickup() {
+  const lang = (state.settings || {}).pickupLang || 'fr';
+  try {
+    const r = await api('GET', `/api/pickup?lang=${lang}`);
+    pickupPreview = r.line;
+    const q = $('#pickupCard q');
+    if (q) q.textContent = r.line;
+  } catch {}
+}
+
+async function saveSettings(patch) {
+  state.settings = { ...state.settings, ...patch };
+  renderPickup();
+  try {
+    state.settings = await api('PUT', '/api/settings', patch);
+  } catch (e) {
+    toast('Oups : ' + e.message);
+    refresh();
+  }
 }
 
 // ---------- Équipe ----------
@@ -349,6 +392,18 @@ document.addEventListener('click', async (e) => {
   if (t.closest('#addBtn')) return openEditor(null);
   const wear = t.closest('[data-wear]');
   if (wear) return setActive(wear.dataset.wear);
+
+  if (t.closest('#pickupToggle')) {
+    const on = !state.settings.pickup;
+    await saveSettings({ pickup: on });
+    return toast(on ? '💬 Pickup lines activées' : 'Pickup lines désactivées');
+  }
+  if (t.closest('#pickupNext')) return nextPickup();
+  const lang = t.closest('[data-lang]');
+  if (lang) {
+    pickupPreview = null;
+    return saveSettings({ pickupLang: lang.dataset.lang });
+  }
 
   const open = t.closest('[data-open-session]');
   if (open) {

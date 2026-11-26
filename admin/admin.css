@@ -156,3 +156,20 @@ dialog::backdrop { background: #000a; backdrop-filter: blur(4px); -webkit-backdr
 
 .toast { position: fixed; left: 50%; bottom: calc(var(--tabh) + env(safe-area-inset-bottom) + 16px); transform: translate(-50%, 40px); opacity: 0; pointer-events: none; background: #fff; color: #000; font-weight: 700; padding: 12px 18px; border-radius: 99px; transition: .25s; z-index: 30; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+/* Pickup lines */
+.switch { position: relative; width: 52px; height: 32px; flex: none; border-radius: 99px; background: #ffffff22; border: 0; padding: 0; transition: background .2s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 2px 6px #0006; }
+.switch.on { background: var(--pink); }
+.switch.on::after { transform: translateX(20px); }
+.toggleRow { display: flex; align-items: center; gap: 12px; }
+.toggleRow .t { flex: 1; }
+.toggleRow .t b { display: block; font-size: 17px; }
+.toggleRow .t span { color: var(--mut); font-size: 13px; }
+.seg { display: flex; background: var(--bg); border-radius: 12px; padding: 3px; margin-top: 14px; }
+.seg button { flex: 1; padding: 9px; border-radius: 10px; background: none; color: var(--mut); font-size: 14px; }
+.seg button.on { background: var(--card2); color: var(--txt); }
+.rizzPreview { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px dashed #ff2e7466; background: #ffffff08; font-weight: 600; display: flex; gap: 10px; align-items: flex-start; }
+.rizzPreview q { flex: 1; quotes: "« " " »"; }
+.rizzPreview button { padding: 2px 8px; background: none; color: var(--pink); font-size: 18px; }
+.pickupCard.off .seg, .pickupCard.off .rizzPreview { opacity: .45; }
