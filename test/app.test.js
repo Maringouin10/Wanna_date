@@ -67,7 +67,7 @@ test('banque + bascule du porteur', async () => {
   await req('POST', '/api/active', { id: jake.id });
   let html = await (await req('GET', '/')).text();
   assert.match(html, /Jake/);
-  assert.match(html, /action="\/envoyer"/);
+  assert.match(html, /action="\/envoyer#f"/);
   assert.match(html, /&lt;b&gt;salut/); // échappé
 
   await req('POST', '/api/active', { id: marin.id });
