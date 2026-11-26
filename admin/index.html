@@ -8,6 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Wanna date">
+  <meta name="format-detection" content="telephone=no">
   <title>Wanna date? — Admin</title>
   <link rel="manifest" href="/admin/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon.png">
@@ -16,11 +17,11 @@
 </head>
 <body>
   <!-- Connexion -->
-  <section id="login" class="screen" hidden>
-    <div class="logo">Wanna date<span>?</span></div>
-    <form id="loginForm" class="card">
+  <section id="login" hidden>
+    <div class="logo big">Wanna date<span>?</span></div>
+    <form id="loginForm" class="card stack">
       <label>Mot de passe admin
-        <input type="password" name="password" autocomplete="current-password" required autofocus>
+        <input type="password" name="password" autocomplete="current-password" required>
       </label>
       <button class="primary" type="submit">Entrer</button>
       <p class="err" id="loginErr"></p>
@@ -28,44 +29,74 @@
   </section>
 
   <!-- App -->
-  <section id="app" class="screen" hidden>
-    <header>
-      <div class="logo small">Wanna date<span>?</span></div>
-      <a class="ghost" href="/?preview" target="_blank" rel="noopener">Voir la page ↗</a>
+  <div id="app" hidden>
+    <header class="top">
+      <div class="logo">Wanna date<span>?</span></div>
+      <a class="pill" href="/?preview" target="_blank" rel="noopener">Voir la page ↗</a>
     </header>
 
-    <div id="current" class="card current"></div>
-
-    <h2>Qui a le chandail&nbsp;?</h2>
-    <p class="hint">Un tap sur quelqu’un = c’est lui qui le porte maintenant.</p>
-    <div id="grid" class="grid"></div>
-
-    <h2>Hall of shame 🏆</h2>
-    <div id="leaderboard" class="card list"></div>
-
-    <h2>Historique</h2>
-    <div id="history" class="card list"></div>
-
-    <h2>QR code du chandail</h2>
-    <div class="card qr">
-      <img id="qrImg" alt="QR code">
-      <p class="hint" id="qrUrl"></p>
-      <div class="row">
-        <a class="btn" id="qrSvg" download="wanna-date-qr.svg">SVG (impression)</a>
-        <a class="btn" id="qrPng" download="wanna-date-qr.png">PNG</a>
+    <!-- Dashboard -->
+    <main id="v-dash" class="view">
+      <div id="sessionCard"></div>
+      <div class="card wearer">
+        <div class="cardHead"><h2>Le chandail est sur</h2><button class="link" data-goto="team">Gérer</button></div>
+        <div id="wearerNow"></div>
+        <div id="chips" class="chips"></div>
       </div>
-    </div>
+      <div id="dashStats"></div>
+    </main>
 
-    <button class="ghost danger full" id="logout">Se déconnecter</button>
-  </section>
+    <!-- Équipe -->
+    <main id="v-team" class="view" hidden>
+      <h1>Équipe</h1>
+      <p class="hint">Tap = cette personne porte le chandail. ✎ pour modifier sa fiche.</p>
+      <div id="grid" class="grid"></div>
+      <h2 class="sec">Hall of shame 🏆</h2>
+      <div id="leaderboard" class="card list"></div>
+    </main>
+
+    <!-- Sessions -->
+    <main id="v-sessions" class="view" hidden>
+      <div id="sessionsList">
+        <h1>Sessions de ski</h1>
+        <p class="hint">Chaque session regroupe les scans d’une journée de ski.</p>
+        <div id="sessions"></div>
+      </div>
+      <div id="sessionDetail" hidden></div>
+    </main>
+
+    <!-- Plus -->
+    <main id="v-more" class="view" hidden>
+      <h1>Plus</h1>
+      <h2 class="sec">QR code du chandail</h2>
+      <div class="card qr">
+        <img id="qrImg" alt="QR code">
+        <p class="hint" id="qrUrl"></p>
+        <div class="row">
+          <a class="btn" id="qrSvg" download="wanna-date-qr.svg">SVG (impression)</a>
+          <a class="btn" id="qrPng" download="wanna-date-qr.png">PNG</a>
+        </div>
+      </div>
+      <h2 class="sec">Historique des passations</h2>
+      <div id="history" class="card list"></div>
+      <button class="ghost danger full" id="logout">Se déconnecter</button>
+    </main>
+
+    <nav class="tabbar">
+      <button data-tab="dash" class="on"><span>📊</span>Dashboard</button>
+      <button data-tab="team"><span>👕</span>Équipe</button>
+      <button data-tab="sessions"><span>⛷️</span>Sessions</button>
+      <button data-tab="more"><span>⚙️</span>Plus</button>
+    </nav>
+  </div>
 
   <!-- Fiche personne -->
   <dialog id="editor">
-    <form id="editForm" method="dialog">
+    <form id="editForm" method="dialog" class="stack">
       <h3 id="editTitle">Nouvelle personne</h3>
       <div class="photoPick">
         <div id="photoPreview" class="avatar"></div>
-        <div class="col">
+        <div class="stack sm">
           <label class="btn">Choisir une photo<input type="file" accept="image/*" id="photoInput" hidden></label>
           <button type="button" class="ghost danger" id="photoRemove">Retirer la photo</button>
         </div>
@@ -96,6 +127,7 @@
     </form>
   </dialog>
 
+  <div id="tip" class="tip" hidden></div>
   <div id="toast" class="toast"></div>
   <script src="/admin/admin.js"></script>
 </body>

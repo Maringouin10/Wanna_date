@@ -78,6 +78,43 @@ test('banque + bascule du porteur', async () => {
   assert.equal((await (await req('GET', '/api/state')).json()).activeId, null);
 });
 
+test('page scanneur sans pied de page + robots ignorés', async () => {
+  const jake = await (await req('POST', '/api/people', { name: 'Zed', instagram: 'zed' })).json();
+  await req('POST', '/api/active', { id: jake.id });
+  const before = (await (await req('GET', '/api/state')).json()).scans.total;
+  const html = await (await req('GET', '/')).text();
+  assert.doesNotMatch(html, /change de propriétaire|Porté par/);
+  await fetch(BASE + '/', { headers: { 'user-agent': 'facebookexternalhit/1.1' } });
+  assert.equal((await (await req('GET', '/api/state')).json()).scans.total, before + 1);
+});
+
+test('sessions de ski + stats', async () => {
+  const s1 = await (await req('POST', '/api/sessions', { name: 'Tremblant' })).json();
+  assert.equal(s1.endedAt, null);
+  await fetch(BASE + '/', { headers: { 'user-agent': 'A' } });
+  await fetch(BASE + '/', { headers: { 'user-agent': 'A' } });
+  await fetch(BASE + '/', { headers: { 'user-agent': 'B' } });
+  let st = await (await req('GET', `/api/stats?session=${s1.id}`)).json();
+  assert.equal(st.total, 3);
+  assert.equal(st.unique, 2);
+  assert.equal(st.times.length, 3);
+
+  // Démarrer une nouvelle session termine l'ancienne.
+  const s2 = await (await req('POST', '/api/sessions', {})).json();
+  const state = await (await req('GET', '/api/state')).json();
+  assert.equal(state.activeSessionId, s2.id);
+  assert.ok(state.sessions.find((x) => x.id === s1.id).endedAt);
+  assert.equal(state.sessions.find((x) => x.id === s1.id).total, 3);
+
+  await req('POST', `/api/sessions/${s2.id}/end`);
+  assert.equal((await (await req('GET', '/api/state')).json()).activeSessionId, null);
+  await req('PUT', `/api/sessions/${s1.id}`, { name: 'Mont-Tremblant' });
+  st = await (await req('GET', `/api/stats?session=${s1.id}`)).json();
+  assert.equal(st.session.name, 'Mont-Tremblant');
+  assert.equal((await req('DELETE', `/api/sessions/${s2.id}`)).status, 200);
+  assert.equal((await req('GET', `/api/stats?session=${s2.id}`)).status, 404);
+});
+
 test('QR code', async () => {
   const r = await req('GET', '/api/qr.svg');
   assert.equal(r.status, 200);

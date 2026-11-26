@@ -1,6 +1,6 @@
 // Service worker minimal : l'interface admin s'ouvre même avec un réseau faible en montagne.
 // Les appels /api ne sont jamais mis en cache (toujours l'état réel).
-const CACHE = 'wd-admin-v1';
+const CACHE = 'wd-admin-v3';
 const SHELL = ['/admin/', '/admin/admin.css', '/admin/admin.js', '/admin/manifest.webmanifest', '/admin/icons/icon.svg'];
 
 self.addEventListener('install', (e) => {

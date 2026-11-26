@@ -42,6 +42,28 @@ wannadate.exemple.com {
 
 ## Utilisation
 
+L'admin a 4 onglets en bas de l'écran :
+
+- **📊 Dashboard** : démarrer/terminer une session de ski, changer le porteur en un tap,
+  et les stats en direct (scans, visiteurs uniques, heure de pointe, dernier scan,
+  graphique des scans par heure, scans par porteur, passations).
+- **👕 Équipe** : la banque de gens + le Hall of shame.
+- **⛷️ Sessions** : toutes les journées de ski passées, avec leurs stats détaillées.
+- **⚙️ Plus** : QR code à imprimer, historique, déconnexion.
+
+### Sessions de ski
+
+Au début de la journée : Dashboard → nom de la montagne → **Démarrer une session de ski**.
+Chaque scan est enregistré avec son heure et la personne qui portait le chandail. En fin de
+journée : **Terminer la session**. Démarrer une nouvelle session termine automatiquement
+l'ancienne. Le graphique s'adapte : par quart d'heure (session courte), par heure, ou par jour.
+
+Les « visiteurs uniques » sont calculés à partir d'une empreinte anonyme (hash non réversible
+de l'IP + navigateur) : aucune donnée personnelle des gens qui scannent n'est stockée.
+Les robots d'aperçu de liens (iMessage, Messenger, WhatsApp…) ne comptent pas.
+
+### Détails
+
 - **＋ Ajouter** : crée une fiche dans la banque (photo, petit message, Instagram, téléphone,
   Snapchat, TikTok, autre lien). Chacun ne met que ce qu'il veut partager.
 - **Tap sur une personne** : c'est elle qui a le chandail maintenant. Effet immédiat sur le QR.

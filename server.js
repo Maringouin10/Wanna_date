@@ -12,7 +12,6 @@ const PORT = Number(process.env.PORT) || 3003;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const PUBLIC_URL = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
-const TZ = process.env.TZ || 'America/Toronto';
 const SESSION_DAYS = 180; // l'iPhone reste connecté longtemps
 
 if (!ADMIN_PASSWORD) {
@@ -87,26 +86,30 @@ app.use((req, res, next) => {
 
 const publicUrl = (req) => PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
 
-const fmtDate = (ts) =>
-  new Intl.DateTimeFormat('fr-CA', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' }).format(ts);
-
 function directUrl(p) {
   if (!p.redirect) return null;
   const l = linksFor(p)[p.redirect];
   return l ? l.url : null;
 }
 
+// Les robots d'aperçu (iMessage, Messenger, etc.) ne comptent pas comme des scans.
+const BOT_RE = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slack|discord|telegram|curl|wget/i;
+
+// Identifiant anonyme d'un visiteur (pour compter les visiteurs uniques) : hash non réversible.
+const visitorId = (req) =>
+  crypto.createHmac('sha256', SECRET).update(`${req.ip}|${req.get('user-agent') || ''}`).digest('base64url').slice(0, 12);
+
 // ---------- Public : ce qu'on voit en scannant le chandail ----------
 
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store'); // le porteur change : jamais de cache
   const p = store.active();
-  if (req.query.preview === undefined) store.recordScan();
+  const counted = req.query.preview === undefined && !BOT_RE.test(req.get('user-agent') || '');
+  if (counted) store.recordScan(visitorId(req));
   if (!p) return res.send(renderEmpty());
   const direct = req.query.preview === undefined && directUrl(p);
   if (direct) return res.redirect(302, direct);
-  const since = store.data.history.find((h) => h.personId === p.id);
-  res.send(renderPerson(p, { since: since ? fmtDate(since.at) : null }));
+  res.send(renderPerson(p));
 });
 
 app.get('/vcard', (req, res) => {
@@ -165,8 +168,42 @@ app.get('/api/state', requireAuth, (req, res) => {
     activeId: store.data.activeId,
     history: store.data.history.slice(0, 50),
     scans: store.data.scans,
+    sessions: store.data.sessions.map((x) => {
+      const st = store.stats(x.startedAt, x.endedAt || Date.now());
+      return { ...x, total: st.total, unique: st.unique };
+    }),
+    activeSessionId: store.activeSession()?.id || null,
     publicUrl: publicUrl(req),
   });
+});
+
+// Stats : ?session=<id>  ou  ?from=<ms>&to=<ms>
+app.get('/api/stats', requireAuth, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (req.query.session) {
+    const x = store.getSession(String(req.query.session));
+    if (!x) return res.sendStatus(404);
+    return res.json({ session: x, ...store.stats(x.startedAt, x.endedAt || Date.now()) });
+  }
+  const from = Number(req.query.from) || Date.now() - 864e5;
+  const to = Number(req.query.to) || Date.now();
+  res.json({ session: null, ...store.stats(from, to) });
+});
+
+app.post('/api/sessions', requireAuth, (req, res) => res.json(store.startSession(req.body?.name)));
+
+app.post('/api/sessions/:id/end', requireAuth, (req, res) => {
+  const x = store.endSession(req.params.id);
+  x ? res.json(x) : res.sendStatus(404);
+});
+
+app.put('/api/sessions/:id', requireAuth, (req, res) => {
+  const x = store.renameSession(req.params.id, req.body?.name);
+  x ? res.json(x) : res.sendStatus(404);
+});
+
+app.delete('/api/sessions/:id', requireAuth, (req, res) => {
+  store.deleteSession(req.params.id) ? res.json({ ok: true }) : res.sendStatus(404);
 });
 
 const wrap = (fn) => (req, res) => {
